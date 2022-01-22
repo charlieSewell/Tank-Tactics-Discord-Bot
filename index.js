@@ -7,7 +7,24 @@ const { Client, Intents, Message } = require('discord.js'); //import discord.js
 const { tokenToString } = require('typescript');
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS], partials: ['MESSAGE', 'CHANNEL', 'REACTION']}); //create new client
-var emojis = [
+var emojisAlive = [
+  "<:player1:934300869548200026>",
+  "<:player2:934302835082936350>",
+  "<:player3:934302834894209034>",
+  "<:player4:934302834965483602>",
+  "<:player5:934302834592206859>",
+  "<:player6:934302834864848926>",
+  "<:player7:934302834403446795>",
+  "<:player8:934302834667692052>",
+  "<:player9:934302834705436692>",
+  "<:player10:934302834739019826>",
+  "<:player11:934303625541451808>",
+  "<:player12:934303588287655986>",
+  "<:player13:934303588304420965>",
+  "<:player14:934304489337397329>"
+]
+//TODO: MAKE DEAD EMOJIS AND POPULATE ARRAY
+var emojisDead = [
   "<:player1:934300869548200026>",
   "<:player2:934302835082936350>",
   "<:player3:934302834894209034>",
@@ -27,21 +44,25 @@ var channel;
 class Position
 {
   constructor(x,y) {
-    this.x = 0;
-    this.y = 0;
+    this.x = x;
+    this.y = y;
     this.id = undefined;
   }
 }
-
+function randomPosition()
+{
+  return new Position(Math.floor(Math.random()*18), Math.floor(Math.random()* 20))
+}
 function addPlayer(userID,playerNumber)
 {
-  players.set(userID,new Player(Math.random()*18, Math.random()* 20, userID,emojis[playerNumber-1]))
+  var pos = randomPosition()
+  players.set(userID,new Player(pos.x, pos.y, userID, playerNumber-1));
 }
 class Player
 {
   constructor(x,y,id,char) {
-    this.x = 7;
-    this.y = 7;
+    this.x = x;
+    this.y = y;
     this.char = char;
     this.ap = 100;
     this.health = 3;
@@ -74,6 +95,7 @@ for(var x = 0; x < 18; x++)
 
 var map1Message;
 var map2Message;
+var registrationMessage;
 
 client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
@@ -130,21 +152,18 @@ client.on('messageCreate', async msg =>
         updateMap();
         map1Message.edit(showMap1());
         map2Message.edit(showMap2());
-      }
-      
-    }
-    
-        
+      }     
+    }    
 })
 function updateMap()
 {
-  players.forEach(element =>{
-    if(map[coordToIndex(element.x,element.y)] != undefined)
-      {
-        map[coordToIndex(element.x,element.y)].char = element.char;
-        map[coordToIndex(element.x,element.y)].id = element.id;
-      }
-  })
+  players.forEach(player => {
+    if(map[coordToIndex(player.x,player.y)] != undefined)
+    {
+      map[coordToIndex(player.x,player.y)].char = player.char;
+      map[coordToIndex(player.x,player.y)].id = player.id;
+    }
+  });
 }
 
 function showMap1()
@@ -156,7 +175,22 @@ function showMap1()
     {
       if(map[coordToIndex(x,y)] != undefined && map[coordToIndex(x,y)].id != undefined)
       {
-        flatmap += players.get(map[coordToIndex(x,y)].id).char;
+        var player = players.get(map[coordToIndex(x,y)].id)
+        if(player.x == x && player.y == y)
+        {
+          if(player.alive)
+          {
+            flatmap += emojisAlive[player.char];
+          }   
+          else 
+          {
+            flatmap += emojisDead[player.char];
+          } 
+        }
+        else
+        {
+          flatmap += '⬜';
+        }
       }
       else
       {
@@ -176,7 +210,22 @@ function showMap2()
     {
       if(map[coordToIndex(x,y)] != undefined && map[coordToIndex(x,y)].id != undefined)
       {
-        flatmap += players.get(map[coordToIndex(x,y)].id).char;
+        var player = players.get(map[coordToIndex(x,y)].id)
+        if(player.x == x && player.y == y)
+        {
+          if(player.alive)
+          {
+            flatmap += emojisAlive[player.char];
+          }   
+          else 
+          {
+            flatmap += emojisDead[player.char];
+          } 
+        }
+        else
+        {
+          flatmap += '⬜';
+        } 
       }
       else
       {
@@ -258,6 +307,26 @@ function shoot(player, otherPlayer)
     
   }
 }
+function giftAP(sender, reciever)
+{
+  if(validateMove(sender, 1))
+  {
+    reciever.ap += 1;
+  }
+}
+function giftHealth(sender, reciever)
+{
+  if(sender.health >= 2)
+  {
+    sender.health -= 1;
+    if(!reciever.alive)
+    {
+      reciever.health = 0;
+      reciever.alive = true;
+    }
+    reciever.health += 1;
+  }
+}
 
 var lockingPlayer = undefined;
 client.on("messageReactionAdd", async (reaction, user) =>{
@@ -308,10 +377,7 @@ client.on("messageReactionAdd", async (reaction, user) =>{
       }
       else if(reaction.emoji.name == "🔫")
       {
-        if(validateMove(user, 1))
-        {
-          shootMenu(player)
-        }
+        shootMenu(player)
       }
       else if(reaction.emoji.name == "❤️")
       {
@@ -339,7 +405,10 @@ client.on("messageReactionAdd", async (reaction, user) =>{
         {
           if(reaction.emoji.name == otherPlayer.char)
           {
-            shoot(player, otherPlayer);
+            if(validateMove(user, 1))
+            {
+              shoot(player, otherPlayer);
+            }
               //return;
           }
         }
@@ -354,5 +423,5 @@ client.on("messageReactionAdd", async (reaction, user) =>{
     }
   }
 })
-//make sure this line is the last line
+
 client.login(process.env.CLIENT_TOKEN); //login bot using token
