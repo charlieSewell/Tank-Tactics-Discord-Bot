@@ -5,6 +5,7 @@ if (result.error) {
   
 const { Client, Intents, Message } = require('discord.js'); //import discord.js
 const { tokenToString } = require('typescript');
+const schedule = require('node-schedule');
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS], partials: ['MESSAGE', 'CHANNEL', 'REACTION']}); //create new client
 var emojisAlive = [
@@ -47,6 +48,7 @@ class Position
     this.x = x;
     this.y = y;
     this.id = undefined;
+    this.hasHeart = false;
   }
 }
 function randomPosition()
@@ -71,6 +73,7 @@ class Player
     this.id = id;
   }
 }
+//Turn coord system into array index
 function coordToIndex(x,y)
 {
   if(x >= 0 && y >= 0)
@@ -95,6 +98,7 @@ for(var x = 0; x < 18; x++)
 
 var map1Message;
 var map2Message;
+
 var registrationMessage;
 
 client.on('ready', () => {
@@ -327,7 +331,14 @@ function giftHealth(sender, reciever)
     reciever.health += 1;
   }
 }
-
+function checkHeart(player)
+{
+  if(map[coordToIndex(player.x,player.y)].hasHeart)
+  {
+    player.health += 1;
+    map[coordToIndex(player.x,player.y)].hasHeart = false;
+  }
+}
 var lockingPlayer = undefined;
 client.on("messageReactionAdd", async (reaction, user) =>{
   if (reaction.partial) {
@@ -345,34 +356,47 @@ client.on("messageReactionAdd", async (reaction, user) =>{
     {
       if(reaction.emoji.name == "⬅️")
       {
-        if(validateMove(user, 1))
+        if(player.y > 0)
         {
-          map[coordToIndex(player.x,player.y)].id = undefined;
-          player.y -= 1;
+          if(validateMove(user, 1))
+          {
+            map[coordToIndex(player.x,player.y)].id = undefined;
+            player.y -= 1;
+          }
         }
+        
       }
       else if(reaction.emoji.name == "⬆️")
       {
-        if(validateMove(user, 1))
+        if(player.x > 0)
         {
-          map[coordToIndex(player.x,player.y)].id = undefined;
-          player.x -= 1;
+          if(validateMove(user, 1))
+          {
+            map[coordToIndex(player.x,player.y)].id = undefined;
+            player.x -= 1;
+          }
         }
       }
       else if(reaction.emoji.name == "⬇️")
       {
-        if(validateMove(user, 1))
+        if(player.x < 17)
         {
-          map[coordToIndex(player.x,player.y)].id = undefined;
-          player.x += 1;
+          if(validateMove(user, 1))
+          {
+            map[coordToIndex(player.x,player.y)].id = undefined;
+            player.x += 1;
+          }
         }
       }
       else if(reaction.emoji.name == "➡️")
       {
-        if(validateMove(user, 1))
+        if(player.y < 19)
         {
-          map[coordToIndex(player.x,player.y)].id = undefined;
-          player.y += 1;
+          if(validateMove(user, 1))
+          {
+            map[coordToIndex(player.x,player.y)].id = undefined;
+            player.y += 1;
+          }
         }
       }
       else if(reaction.emoji.name == "🔫")
@@ -424,4 +448,16 @@ client.on("messageReactionAdd", async (reaction, user) =>{
   }
 })
 
+schedule.scheduleJob('0 0 * * *', () => {
+  players.forEach(player => {
+    if(player.alive)
+    {
+      player.ap += 1;
+    }
+  })
+}) // run everyday at midnight
+
+schedule.scheduleJob('0 12 * * *', () => {
+  
+}) // run everyday at midnight
 client.login(process.env.CLIENT_TOKEN); //login bot using token
