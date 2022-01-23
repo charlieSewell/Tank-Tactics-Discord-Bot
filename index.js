@@ -196,6 +196,10 @@ function showMap1()
           flatmap += '⬜';
         }
       }
+      else if(map[coordToIndex(x,y)] != undefined && map[coordToIndex(x,y)].hasHeart == true)
+      {
+        flatmap += '❤️';
+      }
       else
       {
         flatmap += '⬜';
@@ -231,6 +235,10 @@ function showMap2()
           flatmap += '⬜';
         } 
       }
+      else if(map[coordToIndex(x,y)] != undefined && map[coordToIndex(x,y)].hasHeart == true)
+      {
+        flatmap += '❤️';
+      }
       else
       {
         flatmap += '⬜';
@@ -263,11 +271,12 @@ function shootMenu(player)
       var worldX = player.x + x;
       var worldY = player.y + y;
       var position = map[coordToIndex(worldX,worldY)]
-      var otherPlayer = players.get(position.id);
       if(otherPlayer != undefined)
       {
         if(position != undefined && position.id != undefined)
         {
+          var otherPlayer = players.get(position.id);
+          
           if(position.id != player.id && otherPlayer.alive)
           {
             map2Message.react(player.char)
@@ -339,6 +348,11 @@ function checkHeart(player)
     map[coordToIndex(player.x,player.y)].hasHeart = false;
   }
 }
+function render(){
+  updateMap();
+  map1Message.edit(showMap1());
+  map2Message.edit(showMap2());
+}
 var lockingPlayer = undefined;
 client.on("messageReactionAdd", async (reaction, user) =>{
   if (reaction.partial) {
@@ -362,6 +376,7 @@ client.on("messageReactionAdd", async (reaction, user) =>{
           {
             map[coordToIndex(player.x,player.y)].id = undefined;
             player.y -= 1;
+            checkHeart(player)
           }
         }
         
@@ -374,6 +389,7 @@ client.on("messageReactionAdd", async (reaction, user) =>{
           {
             map[coordToIndex(player.x,player.y)].id = undefined;
             player.x -= 1;
+            checkHeart(player)
           }
         }
       }
@@ -385,6 +401,7 @@ client.on("messageReactionAdd", async (reaction, user) =>{
           {
             map[coordToIndex(player.x,player.y)].id = undefined;
             player.x += 1;
+            checkHeart(player)
           }
         }
       }
@@ -396,6 +413,7 @@ client.on("messageReactionAdd", async (reaction, user) =>{
           {
             map[coordToIndex(player.x,player.y)].id = undefined;
             player.y += 1;
+            checkHeart(player)
           }
         }
       }
@@ -441,9 +459,7 @@ client.on("messageReactionAdd", async (reaction, user) =>{
     reaction.users.remove(user);
     if(map1Message != undefined)
     {
-      updateMap();
-      map1Message.edit(showMap1());
-      map2Message.edit(showMap2());
+      render();
     }
   }
 })
@@ -455,9 +471,18 @@ schedule.scheduleJob('0 0 * * *', () => {
       player.ap += 1;
     }
   })
-}) // run everyday at midnight
+}) // run everyday at midnight to add 1 ap to people
 
-schedule.scheduleJob('0 12 * * *', () => {
-  
-}) // run everyday at midnight
+schedule.scheduleJob('0 12 * * *', () => { 
+  if(map1Message != undefined)
+  {
+    var randPos = randomPosition();
+    map[coordToIndex(randPos.x,randPos.y)].hasHeart = true;
+    render();
+  }
+}) // run everyday at midday to add heart to board
+
+schedule.scheduleJob('0 16 * * *', () => {
+  channel.send("Daily Jury Vote \n Have your pick on who doesnt get their AP");
+})
 client.login(process.env.CLIENT_TOKEN); //login bot using token
